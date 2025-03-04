@@ -4,8 +4,10 @@
 library(tidyr)
 library(tidyverse)
 
-zip_dir  <- "/Users/allegrasaggese/Desktop/research/school-boards/data-zipped" # Where IPMUS data is 
-data_dir <- "/Users/allegrasaggese/Desktop/research/school-boards/IPMUS-unzipped"  # Destination folder
+zip_dir  <- "/Users/allegrasaggese/Desktop/research/school-boards/data-zipped" # Where GRF (spatial) data is 
+data_dir <- "/Users/allegrasaggese/Desktop/research/school-boards/grf-unzipped"  # Destination folder
+census_zip <- "/Users/allegrasaggese/Desktop/research/school-boards/usa_00001.dat.gz" #raw IPUMS data download 
+data_dir2 <-"/Users/allegrasaggese/Desktop/research/school-boards/ipums-unzipped"
 
 # make directory if not already set in script
 if (!dir.exists(data_dir)) {
