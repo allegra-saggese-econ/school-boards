@@ -1,13 +1,14 @@
 # purpose: script for cleaning IPMUS data
 # author : allegra saggese
-
-library(tidyr)
-library(tidyverse)
+library(R.utils)
+library(ff)
+library(ipumsr)
+library(RSQLite)
+library(DBI)
 
 zip_dir  <- "/Users/allegrasaggese/Desktop/research/school-boards/data-zipped" # Where GRF (spatial) data is 
 data_dir <- "/Users/allegrasaggese/Desktop/research/school-boards/grf-unzipped"  # Destination folder
-census_zip <- "/Users/allegrasaggese/Desktop/research/school-boards/usa_00001.dat.gz" #raw IPUMS data download 
-data_dir2 <-"/Users/allegrasaggese/Desktop/research/school-boards/ipums-unzipped"
+data_dir_2 <- "/Users/allegrasaggese/Desktop/research/school-boards/ipums" #raw IPUMS data folder
 
 # make directory if not already set in script
 if (!dir.exists(data_dir)) {
@@ -34,8 +35,6 @@ files_loose_lower <- list.files(
 for (file_path in files_loose_lower) {
   # Get just the filename, e.g. "GRF81_something.dat"
   fname <- basename(file_path)
-  
-  # Extract the first 5 characters: "GRFXX"
   prefix <- substr(fname, 1, 5)
   
   # Create the destination folder (e.g., "data_dir/GRF81")
@@ -50,6 +49,7 @@ for (file_path in files_loose_lower) {
   # Move the file into the new subfolder
   file.rename(from = file_path, to = new_file_path)
 }
+
 
 # change all subfolders to be lowercase 
 dirs <- list.dirs(path = data_dir, full.names = TRUE, recursive = FALSE)
@@ -67,8 +67,44 @@ for (dir_path in dirs) {
   }
 }
 
+
 # clear enviro, make list of grf dirs for looping
-rm(list = setdiff(ls(), c("zip_dir", "data_dir")))
+rm(list = setdiff(ls(), c("zip_dir", "data_dir", "data_dir_2")))
 grf_dirs <- list.dirs(path = data_dir, full.names = TRUE, recursive = FALSE)
 
-# next step - manually review files so I understand what is in each one 
+
+# READ IN IPUMS DATA - start with xml, then .dat
+ddi <- read_ipums_ddi(file.path(data_dir_2,"usa_00001.xml"))
+
+chunk_callback <- function(chunk_df, pos) {
+  print(paste("Processing chunk:", pos))
+  print(head(chunk_df))  # Show the first few rows of each chunk
+  return(NULL)           # Don't accumulate data in memory
+}
+
+read_ipums_micro_chunked(
+  ddi,
+  chunk_size = 50000,  # Adjust if necessary
+  callback   = chunk_callback
+)
+
+# now create a SQL database to callback / store 
+con <- dbConnect(SQLite(), "ipums_data.sqlite")
+
+# Modify the chunk callback to store each chunk in the database
+chunk_callback <- function(chunk_df, pos) {
+  chunk_df <- as.data.frame(chunk_df)  # Convert to base R data.frame (not tibble)
+  print(paste("Processing and saving chunk:", pos))
+  # Write to the SQLite table "ipums_table" (append if table exists)
+  dbWriteTable(con, "ipums_table", chunk_df, append = TRUE, row.names = FALSE)
+  return(NULL)  # No need to keep anything in memory
+}
+
+# 3. Read the .dat file in chunks and store in the database
+read_ipums_micro_chunked(
+  ddi,
+  chunk_size = 50000,
+  callback   = chunk_callback
+)
+
+dbDisconnect(con) #close connection 
