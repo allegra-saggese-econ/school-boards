@@ -64,14 +64,13 @@ con <- dbConnect(SQLite(), sqlite_path)
 on.exit(dbDisconnect(con), add = TRUE)
 dbExecute(con, "PRAGMA busy_timeout = 5000")
 
-# Only one index is needed here: (YEAR, AGE, SEX) makes the per-year, per-sex
-# age-range pulls in pull_person_side() index-only scans. The other indices
-# ipums-county-household-analysis.R creates aren't used by this script, and
-# index creation on a 42GB table is slow and consumes scarce disk — so don't
-# create what we don't need. Already-existing index makes this a no-op.
-invisible(dbExecute(
-  con, "CREATE INDEX IF NOT EXISTS idx_ipums_age_sex ON ipums_table (YEAR, AGE, SEX)"
-))
+# No index is created here, deliberately. This comment used to claim an index
+# on (YEAR, AGE, SEX) made pull_person_side() an index-only scan; that stopped
+# being true when the pulls moved to year rowid-ranges with NOT INDEXED, which
+# measured ~290x faster on this database (see year_rowid_clause() below). The
+# index was never dropped, and cost 1.57 GB for nothing. Leaving it uncreated
+# keeps the database at its built size — see the indexes section of
+# ipums-bkp-build-database.R.
 
 # ── 0) Config ──────────────────────────────────────────────────────────────
 young_wife_age  <- c(22, 31)
