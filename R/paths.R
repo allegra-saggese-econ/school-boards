@@ -33,24 +33,39 @@ get_cfg <- function(key, default = NULL) {
   default
 }
 
+# A config value that is already an absolute path (e.g. a Dropbox location)
+# should be used as-is; a relative value (e.g. "data") stays relative to the
+# repo root. file.path() doesn't do this reset on its own.
+is_absolute_path <- function(path) {
+  grepl("^(/|~|[A-Za-z]:[\\\\/])", path)
+}
+
 data_root <- function() {
   env <- Sys.getenv("SCHOOL_BOARDS_DATA_ROOT")
   if (nzchar(env)) {
-    return(env)
+    return(path.expand(env))
   }
-  file.path(repo_root(), get_cfg("data_root", "data"))
+  cfg_val <- get_cfg("data_root", "data")
+  if (is_absolute_path(cfg_val)) {
+    return(path.expand(cfg_val))
+  }
+  file.path(repo_root(), cfg_val)
 }
 
 external_root <- function() {
   env <- Sys.getenv("SCHOOL_BOARDS_EXTERNAL_ROOT")
   if (nzchar(env)) {
-    return(env)
+    return(path.expand(env))
   }
   get_cfg("external_data_root", "")
 }
 
 graphs_dir <- function() {
-  file.path(repo_root(), get_cfg("graphs_dir", "data/graphs"))
+  cfg_val <- get_cfg("graphs_dir", "graphs")
+  if (is_absolute_path(cfg_val)) {
+    return(path.expand(cfg_val))
+  }
+  file.path(data_root(), cfg_val)
 }
 
 data_path <- function(...) {

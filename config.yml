@@ -1,3 +1,3 @@
-data_root: data
+data_root: /Users/allegrasaggese/Dropbox/mf-as-shared-ideas/tradwives/data
 external_data_root: /Users/allegrasaggese/Dropbox/mf-as-shared-ideas/tradwives
-graphs_dir: data/graphs
+graphs_dir: graphs
